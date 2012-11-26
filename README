@@ -1,0 +1,189 @@
+NAME
+    Dancer::Plugin::Auth::Extensible - extensible authentication framework
+    for Dancer apps
+
+DESCRIPTION
+    A user authentication and authorisation framework plugin for Dancer
+    apps.
+
+    Makes it easy to require a user to be logged in to access certain
+    routes, provides role-based access control, and supports various
+    authentication methods/sources (config file, database, Unix system
+    users, etc).
+
+    Designed to support multiple authentication realms and to be as
+    extensible as possible.
+
+SYNOPSIS
+    Configure the plugin to use the authentication provider class you wish
+    to use:
+
+      plugins:
+            Auth::Extensible:
+                realms:
+                    users:
+                        provider: Example
+                        ....
+
+    The configuration you provide will depend on the authentication provider
+    module in use. For a simple example, see
+    Dancer::Plugin::Auth:Extensible::Provider::Config.
+
+    Define that a user must be logged in and have the proper permissions to
+    access a route:
+
+        get '/secret' => sub :RequireRole(Confidant) { tell_secrets(); };
+
+    Define that a user must be logged in to access a route - and find out
+    who is logged in with the `logged_in_user' keyword:
+
+        get '/users' => sub :RequireLogin {
+            my $user = logged_in_user;
+            return "Hi there, $user->{username}";
+        };
+
+AUTHENTICATION PROVIDERS
+    For flexibility, this authentication framework uses simple
+    authentication provider classes, which implement a simple interface and
+    do whatever is required to authenticate a user.
+
+    For an example of how simple provider classes are, so you can build your
+    own if required or just try out this authentication framework plugin
+    easily, see Dancer::Plugin::Auth::Extensible::Provider::Example.
+
+    This framework supplies the following providers out-of-the-box:
+
+    Dancer::Plugin::Auth::Extensible::Provider::Unix
+    Dancer::Plugin::Auth::Extensible::Provider::Database
+    Dancer::Plugin::Auth::Extensible::Provider::Config
+
+CONTROLLING ACCESS TO ROUTES
+    Subroutine attributes are used to indicate that a route requires a
+    login, or a specific role.
+
+    Multiple roles can easily be provided as a space-separated list, for
+    example:
+
+        get '/user/:user_id' => sub :RequireRole(Admin TeamLeader) {
+            ...
+        };
+
+    (The user will be granted access if they have any of the roles denoted.)
+
+    If you only care that the user be logged in, use the RequireLogin
+    attribute instead:
+
+        get '/dashboard' => sub :RequireLogin { .... };
+
+    If the user is not logged in, they will be redirected to the login page
+    URL to log in. Currently, the URL is `/login' - this may be made
+    configurable.
+
+  Replacing the Default ` /login ' and ` /login/denied ' Routes
+    By default, the plugin adds a route to present a simple login form at
+    that URL. If you would rather add your own, set the `no_default_pages'
+    setting to a true value, and define your own route which responds to
+    `/login' with a login page.
+
+    If the user is logged in, but tries to access a route which requires a
+    specific role they don't have, they will be redirected to the
+    "permission denied" page URL, which is `/login/denied' - this may be
+    made configurable later.
+
+    Again, by default a route is added to respond to that URL with a default
+    page; again, you can disable this by setting `no_default_pages' and
+    creating your own.
+
+  Keywords
+    logged_in_user
+        Returns a hashref of details of the currently logged-in user, if
+        there is one.
+
+        The details you get back will depend upon the authentication
+        provider in use.
+
+    user_has_role
+        Check if a user has the role named.
+
+        By default, the currently-logged-in user will be checked, so you
+        need only name the role you're looking for:
+
+            if (user_has_role('BeerDrinker')) { pour_beer(); }
+
+        You can also provide the username to check;
+
+            if (user_has_role($user, $role)) { .... }
+
+    user_roles
+        Returns a list of the roles of a user.
+
+        By default, roles for the currently-logged-in user will be checked;
+        alternatively, you may supply a username to check.
+
+        Returns a list or arrayref depending on context.
+
+    authenticate_user
+        Usually you'll want to let the built-in login handling code deal
+        with authenticating users, but in case you need to do it yourself,
+        this keyword accepts a username and password, and optionally a
+        specific realm, and checks whether the username and password are
+        valid.
+
+        For example:
+
+            if (authenticate_user($username, $password)) {
+                ...
+            }
+
+        If you are using multiple authentication realms, by default each
+        realm will be consulted in turn. If you only wish to check one of
+        them (for instance, you're authenticating an admin user, and there's
+        only one realm which applies to them), you can supply the realm as
+        an optional third parameter.
+
+        In boolean context, returns simply true or false; in list context,
+        returns `($success, $realm)'.
+
+  SAMPLE CONFIGURATION
+    In your application's configuation file:
+
+        session: simple
+        plugins:
+            Auth::Extensible:
+                # Set to 1 if you want to disable the use of roles (0 is default)
+                disable_roles: 0
+            
+                # List each authentication realm, with the provider to use and the
+                # provider-specific settings (see the documentation for the provider
+                # you wish to use)
+                realms:
+                    realm_one:
+                        provider: Database
+                            db_connection_name: 'foo'
+
+    Please note that you must have a session provider configured. The
+    authentication framework requires sessions in order to track information
+    about the currently logged in user. Please see Dancer::Session for
+    information on how to configure session management within your
+    application.
+
+BUGS / FEATURE REQUESTS
+    This is an early version; there may still be bugs present or features
+    missing.
+
+    This is developed on GitHub - please feel free to raise issues or pull
+    requests against the repo at:
+    https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible
+
+ACKNOWLEDGEMENTS
+    None yet - why not help out and get your name here? :)
+
+LICENSE AND COPYRIGHT
+    Copyright 2012 David Precious.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of either: the GNU General Public License as published
+    by the Free Software Foundation; or the Artistic License.
+
+    See http://dev.perl.org/licenses/ for more information.
+
