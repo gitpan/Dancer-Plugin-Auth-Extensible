@@ -34,10 +34,11 @@
          "requires" : {
             "Crypt::SaltedHash" : "0",
             "Dancer" : "1.31",
-            "Test::More" : "0"
+            "Test::More" : "0",
+            "YAML" : "0"
          }
       }
    },
    "release_status" : "stable",
-   "version" : "0.01"
+   "version" : "0.02"
 }

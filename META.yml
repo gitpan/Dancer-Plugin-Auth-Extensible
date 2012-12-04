@@ -21,4 +21,5 @@ requires:
   Crypt::SaltedHash: 0
   Dancer: 1.31
   Test::More: 0
-version: 0.01
+  YAML: 0
+version: 0.02

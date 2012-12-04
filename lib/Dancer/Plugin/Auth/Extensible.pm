@@ -7,7 +7,7 @@ use Dancer::Plugin;
 use Dancer qw(:syntax);
 use Scalar::Util qw(refaddr);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 my $settings = plugin_setting;
 
@@ -28,7 +28,9 @@ provides role-based access control, and supports various authentication
 methods/sources (config file, database, Unix system users, etc).
 
 Designed to support multiple authentication realms and to be as extensible as
-possible.
+possible, and to make secure password handling easy (the base class for auth
+providers makes handling C<RFC2307>-style hashed passwords really simple, so you
+have no excuse for storing plain-text passwords).
 
 
 =head1 SYNOPSIS
@@ -304,13 +306,25 @@ sub auth_provider {
 }
 
 register_hook qw(login_required permission_denied);
-register_plugin versions => qw(1 2);
+register_plugin for_versions => [qw(1 2)];
 
 # Hook to catch routes about to be executed, and check for attributes telling us
 # we need to make sure the user is auth'd
 
 hook before => sub {
     my $route_handler = shift || return;
+
+    Dancer::Logger::debug("Entering DPAE before hook");
+    # First, ensure we have sane configuration - we can't do much otherwise!
+    if (!$settings || !ref $settings || !exists $settings->{realms}
+        || !ref $settings->{realms} eq 'ARRAY')
+    {
+        Dancer::Logger::error(
+            "Configuration error - configuration for " . __PACKAGE__
+            . " missing or invalid, please consult docs"
+        );
+        #return send_error("Authentication configuration error!");
+    }
 
     my $requires_login = get_attribs_by_type(
         'RequireLogin', $route_handler->code

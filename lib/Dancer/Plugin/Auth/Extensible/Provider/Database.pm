@@ -35,42 +35,63 @@ This provider tries to use sensible defaults, so you may not need to provide
 much configuration if your database tables look similar to those in the
 L</SUGGESTED SCHEMA> section below.
 
-The most basic configuration, assuming defaults for all options:
+The most basic configuration, assuming defaults for all options, and defining a
+single authentication realm named 'users':
 
     plugins:
         Auth::Extensible:
-            provider: 'Database'
+            realms:
+                users:
+                    provider: 'Database'
+
+You would still need to have provided suitable database connection details to
+L<Dancer::Plugin::Database>, of course;  see the docs for that plugin for full
+details, but it could be as simple as, e.g.:
+
+    plugins:
+        Auth::Extensible:
+            realms:
+                users:
+                    provider: 'Database'
+        Database:
+            driver: 'SQLite'
+            database: 'test.sqlite'
+
 
 A full example showing all options:
 
     plugins:
         Auth::Extensible:
-            provider: 'Database'
-            # optionally set DB connection name to use (see named connections in
-            # Dancer::Plugin::Database docs)
-            db_connection_name: 'foo'
+            realms:
+                users:
+                    provider: 'Database'
+                    # optionally set DB connection name to use (see named 
+                    # connections in Dancer::Plugin::Database docs)
+                    db_connection_name: 'foo'
 
-            # Optionally disable roles support, if you only want to check for
-            # successful logins but don't need to use role-based access:
-            disable_roles: 1
+                    # Optionally disable roles support, if you only want to check
+                    # for successful logins but don't need to use role-based access:
+                    disable_roles: 1
 
-            # optionally specify names of tables if they're not the defaults
-            # (defaults are 'users', 'roles' and 'user_roles')
-            users_table: 'users'
-            roles_table: 'roles'
-            user_roles_table: 'user_roles'
+                    # optionally specify names of tables if they're not the defaults
+                    # (defaults are 'users', 'roles' and 'user_roles')
+                    users_table: 'users'
+                    roles_table: 'roles'
+                    user_roles_table: 'user_roles'
 
-            # optionally set the column names (see the SUGGESTED SCHEMA section
-            # below for the default names; if you use them, they'll Just Work)
-            users_id_column: 'id'
-            users_username_column: 'username'
-            users_password_column: 'password'
-            roles_id_column: 'id'
-            roles_role_column: 'role'
-            user_roles_user_id_column: 'user_id'
-            user_roles_role_id_column: 'roles_id'
+                    # optionally set the column names (see the SUGGESTED SCHEMA
+                    # section below for the default names; if you use them, they'll
+                    # Just Work)
+                    users_id_column: 'id'
+                    users_username_column: 'username'
+                    users_password_column: 'password'
+                    roles_id_column: 'id'
+                    roles_role_column: 'role'
+                    user_roles_user_id_column: 'user_id'
+                    user_roles_role_id_column: 'roles_id'
 
-
+See the main L<Dancer::Plugin::Auth::Extensible> documentation for how to
+configure multiple authentication realms.
 
 =head1 SUGGESTED SCHEMA
 
@@ -146,7 +167,7 @@ sub authenticate_user {
 
     my $settings = $self->realm_settings;
     my $password_column = $settings->{users_password_column} || 'password';
-    return $self->match_password($password, $user->{$password_column};
+    return $self->match_password($password, $user->{$password_column});
 }
 
 
