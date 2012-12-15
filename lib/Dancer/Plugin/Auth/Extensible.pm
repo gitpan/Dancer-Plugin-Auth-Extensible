@@ -7,7 +7,7 @@ use Dancer::Plugin;
 use Dancer qw(:syntax);
 use Scalar::Util qw(refaddr);
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 my $settings = plugin_setting;
 
@@ -46,7 +46,7 @@ Configure the plugin to use the authentication provider class you wish to use:
 
 The configuration you provide will depend on the authentication provider module
 in use.  For a simple example, see
-L<Dancer::Plugin::Auth:Extensible::Provider::Config>.
+L<Dancer::Plugin::Auth::Extensible::Provider::Config>.
 
 Define that a user must be logged in and have the proper permissions to 
 access a route:
@@ -323,7 +323,7 @@ hook before => sub {
             "Configuration error - configuration for " . __PACKAGE__
             . " missing or invalid, please consult docs"
         );
-        #return send_error("Authentication configuration error!");
+        return send_error("Authentication configuration error!");
     }
 
     my $requires_login = get_attribs_by_type(
