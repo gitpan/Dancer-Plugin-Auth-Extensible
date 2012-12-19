@@ -40,5 +40,14 @@
       }
    },
    "release_status" : "stable",
-   "version" : "0.04"
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/issues"
+      },
+      "homepage" : "https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/",
+      "repository" : {
+         "url" : "https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible"
+      }
+   },
+   "version" : "0.10"
 }

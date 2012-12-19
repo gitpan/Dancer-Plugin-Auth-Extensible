@@ -22,4 +22,8 @@ requires:
   Dancer: 1.31
   Test::More: 0
   YAML: 0
-version: 0.04
+resources:
+  bugtracker: https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/issues
+  homepage: https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/
+  repository: https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible
+version: 0.10

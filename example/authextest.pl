@@ -9,7 +9,7 @@ get '/' => sub {
     if (my $user = logged_in_user()) {
         $content .= "<p>Hi there, $user->{name}!</p>";
     } else {
-        $content .= "<p>Why not log in?</p>";
+        $content .= "<p>Why not <a href=\"/login\">log in</a>?</p>";
     }
 
     $content .= <<LINKS;
@@ -28,17 +28,17 @@ LINKS
     return $content;
 };
 
-get '/secret' => sub :RequireLogin() { "Need to be logged in" };
+get '/secret' => require_login sub { "Only logged-in users can see this" };
 
-get '/beer' => sub :RequireRole(BeerDrinker HardDrinker) {
+get '/beer' => require_any_role [qw(BeerDrinker HardDrinker)], sub {
     "Any drinker can get beer.";
 };
 
-get '/vodka' => sub :RequireRole(HardDrinker) {
+get '/vodka' => require_role HardDrinker => sub {
     "Only hard drinkers get vodka";
 };
 
-get '/realm' => sub :RequiresLogin() {
+get '/realm' => require_login sub {
     "You are logged in using realm: " . session->{logged_in_user_realm};
 };
 dance();
