@@ -20,5 +20,4 @@ example/config.yml
 ignore.txt
 Makefile.PL
 Changes
-META.yml                                 Module YAML meta-data (added by MakeMaker)
-META.json                                Module JSON meta-data (added by MakeMaker)
+META.yml                                 Module meta-data (added by MakeMaker)

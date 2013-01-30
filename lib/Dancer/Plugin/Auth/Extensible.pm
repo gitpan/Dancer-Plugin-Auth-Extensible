@@ -8,7 +8,7 @@ use Dancer::Plugin;
 use Dancer qw(:syntax);
 use Scalar::Util qw(refaddr);
 
-our $VERSION = '0.10';
+our $VERSION = '0.20';
 
 my $settings = plugin_setting;
 
@@ -67,7 +67,7 @@ L<Dancer::Plugin::Auth::Extensible::Provider::Config>.
 Define that a user must be logged in and have the proper permissions to 
 access a route:
 
-    get '/secret' => sub require_role Confidant => sub { tell_secrets(); };
+    get '/secret' => require_role Confidant => sub { tell_secrets(); };
 
 Define that a user must be logged in to access a route - and find out who is
 logged in with the C<logged_in_user> keyword:
@@ -81,7 +81,7 @@ logged in with the C<logged_in_user> keyword:
 
 For flexibility, this authentication framework uses simple authentication
 provider classes, which implement a simple interface and do whatever is required
-to authenticate a user.
+to authenticate a user against the chosen source of authentication.
 
 For an example of how simple provider classes are, so you can build your own if
 required or just try out this authentication framework plugin easily, 
@@ -93,11 +93,21 @@ This framework supplies the following providers out-of-the-box:
 
 =item L<Dancer::Plugin::Auth::Extensible::Provider::Unix>
 
+Authenticates users using system accounts on Linux/Unix type boxes
+
 =item L<Dancer::Plugin::Auth::Extensible::Provider::Database>
+
+Authenticates users stored in a database table
 
 =item L<Dancer::Plugin::Auth::Extensible::Provider::Config>
 
+Authenticates users stored in the app's config
+
 =back
+
+Need to write your own?  Just subclass
+L<Dancer::Plugin::Auth::Extensible::Provider::Base> and implement the required
+methods, and you're good to go!
 
 =head1 CONTROLLING ACCESS TO ROUTES
 
@@ -110,7 +120,8 @@ Keywords are provided to check if a user is logged in / has appropriate roles.
     get '/dashboard' => require_login sub { .... };
 
 If the user is not logged in, they will be redirected to the login page URL to
-log in.  Currently, the URL is C</login> - this may be made configurable.
+log in.  The default URL is C</login> - this may be changed with the
+C<login_url> option.
 
 =item require_role - require the user to have a specified role
 
@@ -151,7 +162,8 @@ value, and define your own route which responds to C</login> with a login page.
 
 If the user is logged in, but tries to access a route which requires a specific
 role they don't have, they will be redirected to the "permission denied" page
-URL, which is C</login/denied> - this may be made configurable later.
+URL, which defaults to C</login/denied> but may be changed using the
+C<denied_page> option.
 
 Again, by default a route is added to respond to that URL with a default page;
 again, you can disable this by setting C<no_default_pages> and creating your
@@ -181,7 +193,7 @@ sub require_login {
         if (!$user) {
             execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return redirect '/login';
+            return redirect uri_for($loginpage, { return_url => request->path });
         }
         return $coderef->();
     };
@@ -196,6 +208,11 @@ Used to wrap a route which requires a user to be logged in as a user with the
 specified role in order to access it.
 
     get '/beer' => require_role BeerDrinker => sub { ... };
+
+You can also provide a regular expression, if you need to match the role using a
+regex - for example:
+
+    get '/beer' => require_role qr/Drinker$/ => sub { ... };
 
 =cut
 sub require_role {
@@ -251,12 +268,14 @@ sub _build_wrapper {
         if (!$user) {
             execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return redirect '/login';
+            return redirect uri_for($loginpage, { return_url => request->path });
         }
 
         my $role_match;
         if ($mode eq 'single') {
-            $role_match++ if user_has_role($require_role);
+            for (user_roles()) {
+                $role_match++ and last if $_ ~~ $require_role;
+            }
         } elsif ($mode eq 'any') {
             my %role_ok = map { $_ => 1 } @role_list;
             for (user_roles()) {
@@ -278,7 +297,7 @@ sub _build_wrapper {
 
         execute_hook('permission_denied', $coderef);
         # TODO: see if any code executed by that hook set up a response
-        return redirect '/login/denied';
+        return redirect uri_for($deniedpage, { return_url => request->path });
     };
 }
 
@@ -404,6 +423,9 @@ sub authenticate_user {
     # failed login.
     return wantarray ? (0, undef) : 0;
 }
+
+register authenticate_user => \&authenticate_user;
+
 
 =back
 
@@ -543,6 +565,7 @@ sub _default_login_page {
     my $login_fail_message = vars->{login_failed}
         ? "<p>LOGIN FAILED</p>"
         : "";
+    my $return_url = params->{return_url} || '';
     return <<PAGE;
 <h1>Login Required</h1>
 
@@ -559,6 +582,7 @@ $login_fail_message
 <label for="password">Password:</label>
 <input type="password" name="password" id="password">
 <br />
+<input type="hidden" name="return_url" value="$return_url">
 <input type="submit" value="Login">
 </form>
 PAGE
@@ -585,6 +609,8 @@ including Matt S Trout (mst), David Golden (xdg), Damien Krotkine (dams),
 Daniel Perrett, and others.
 
 Configurable login/logout URLs added by Rene (hertell)
+
+Regex support for require_role by chenryn
 
 =head1 LICENSE AND COPYRIGHT
 

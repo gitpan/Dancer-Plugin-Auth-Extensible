@@ -1,29 +1,29 @@
----
-abstract: 'extensible authentication framework for Dancer apps'
+--- #YAML:1.0
+name:               Dancer-Plugin-Auth-Extensible
+version:            0.20
+abstract:           extensible authentication framework for Dancer apps
 author:
-  - 'David Precious <davidp@preshweb.co.uk>'
-build_requires:
-  ExtUtils::MakeMaker: 0
+    - David Precious <davidp@preshweb.co.uk>
+license:            perl
+distribution_type:  module
 configure_requires:
-  ExtUtils::MakeMaker: 0
-dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.120921'
-license: perl
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
-name: Dancer-Plugin-Auth-Extensible
-no_index:
-  directory:
-    - t
-    - inc
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
 requires:
-  Crypt::SaltedHash: 0
-  Dancer: 1.31
-  Test::More: 0
-  YAML: 0
+    Crypt::SaltedHash:  0
+    Dancer:             1.31
+    Test::More:         0
+    YAML:               0
 resources:
-  bugtracker: https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/issues
-  homepage: https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/
-  repository: https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible
-version: 0.10
+    bugtracker:  https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/issues
+    homepage:    https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible/
+    repository:  https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.55_02
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4
