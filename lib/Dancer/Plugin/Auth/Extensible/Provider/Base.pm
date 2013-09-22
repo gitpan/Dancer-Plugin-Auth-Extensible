@@ -5,7 +5,7 @@ use Crypt::SaltedHash;
 
 =head1 NAME
 
-Dancer::Plugin::Auth::Extensible::Provider::Base
+Dancer::Plugin::Auth::Extensible::Provider::Base - base class for authentication providers
 
 =head1 DESCRIPTION
 
@@ -16,7 +16,7 @@ Also provides secure password matching which automatically handles crypted
 passwords via Crypt::SaltedHash.
 
 Finally, provides the methods which providers must override with their
-implementation, which will die if they are not overriden.
+implementation, which will die if they are not overridden.
 
 =cut
 

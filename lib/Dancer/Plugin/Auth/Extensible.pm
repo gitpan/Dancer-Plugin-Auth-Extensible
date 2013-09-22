@@ -2,21 +2,22 @@ package Dancer::Plugin::Auth::Extensible;
 
 use warnings;
 use strict;
-use attributes;
+
 use Carp;
 use Dancer::Plugin;
 use Dancer qw(:syntax);
-use Scalar::Util qw(refaddr);
 
-our $VERSION = '0.20';
+our $VERSION = '0.30';
 
 my $settings = plugin_setting;
 
 my $loginpage = $settings->{login_page} || '/login';
+my $userhomepage = $settings->{user_home_page} || '/';
 my $logoutpage = $settings->{logout_page} || '/logout';
 my $deniedpage = $settings->{denied_page} || '/login/denied';
+my $exitpage = $settings->{exit_page};
 
-
+if(!$settings->{no_api_change_warning}) {
 Dancer::Logger::warning(<<CHANGEWARNING);
 
 ***************************************************************************
@@ -30,6 +31,7 @@ Dancer::Logger::warning(<<CHANGEWARNING);
 ***************************************************************************
 
 CHANGEWARNING
+}
 
 =head1 NAME
 
@@ -169,6 +171,31 @@ Again, by default a route is added to respond to that URL with a default page;
 again, you can disable this by setting C<no_default_pages> and creating your
 own.
 
+This would still leave the routes C<post '/login'> and C<any '/logout'>
+routes in place. To disable them too, set the option C<no_login_handler> 
+to a true value. In this case, these routes should be defined by the user,
+and should do at least the following:
+
+    post '/login' => sub {
+        my ($success, $realm) = authenticate_user(
+            params->{username}, params->{password}
+        );
+        if ($success) {
+            session logged_in_user => params->{username};
+            session logged_in_user_realm => $realm;
+            # other code here
+        } else {
+            # authentication failed
+        }
+    };
+    
+    any '/logout' => sub {
+        session->destroy;
+    };
+    
+If you want to use the default C<post '/login'> and C<any '/logout'> routes
+you can configure them. See below.
+
 =head2 Keywords
 
 =over
@@ -193,7 +220,7 @@ sub require_login {
         if (!$user) {
             execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return redirect uri_for($loginpage, { return_url => request->path });
+            return redirect uri_for($loginpage, { return_url => request->request_uri });
         }
         return $coderef->();
     };
@@ -268,13 +295,13 @@ sub _build_wrapper {
         if (!$user) {
             execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return redirect uri_for($loginpage, { return_url => request->path });
+            return redirect uri_for($loginpage, { return_url => request->request_uri });
         }
 
         my $role_match;
         if ($mode eq 'single') {
             for (user_roles()) {
-                $role_match++ and last if $_ ~~ $require_role;
+                $role_match++ and last if _smart_match($_, $require_role);
             }
         } elsif ($mode eq 'any') {
             my %role_ok = map { $_ => 1 } @role_list;
@@ -297,7 +324,7 @@ sub _build_wrapper {
 
         execute_hook('permission_denied', $coderef);
         # TODO: see if any code executed by that hook set up a response
-        return redirect uri_for($deniedpage, { return_url => request->path });
+        return redirect uri_for($deniedpage, { return_url => request->request_uri });
     };
 }
 
@@ -369,10 +396,12 @@ Returns a list or arrayref depending on context.
 =cut
 
 sub user_roles {
-    my ($username) = @_;
+    my ($username, $realm) = @_;
     $username = session 'logged_in_user' unless defined $username;
 
-    my $roles = auth_provider()->get_user_roles($username);
+    my $search_realm = ($realm ? $realm : '');
+
+    my $roles = auth_provider($search_realm)->get_user_roles($username);
     return unless defined $roles;
     return wantarray ? @$roles : $roles;
 }
@@ -438,6 +467,10 @@ In your application's configuation file:
         Auth::Extensible:
             # Set to 1 if you want to disable the use of roles (0 is default)
             disable_roles: 0
+            # After /login: If no return_url is given: land here ('/' is default)
+            user_home_page: '/user'
+            # After /logout: If no return_url is given: land here (no default)
+            exit_page: '/'
             
             # List each authentication realm, with the provider to use and the
             # provider-specific settings (see the documentation for the provider
@@ -524,6 +557,10 @@ if (!$settings->{no_default_pages}) {
     };
 }
 
+
+# If no_login_handler is set, let the user do the login/logout herself
+if (!$settings->{no_login_handler}) {
+
 # Handle logging in...
 post $loginpage => sub {
     my ($success, $realm) = authenticate_user(
@@ -532,7 +569,7 @@ post $loginpage => sub {
     if ($success) {
         session logged_in_user => params->{username};
         session logged_in_user_realm => $realm;
-        redirect params->{return_url} || '/';
+        redirect params->{return_url} || $userhomepage;
     } else {
         vars->{login_failed}++;
         forward $loginpage, { login_failed => 1 }, { method => 'GET' };
@@ -544,12 +581,17 @@ any ['get','post'] => $logoutpage => sub {
     session->destroy;
     if (params->{return_url}) {
         redirect params->{return_url};
+    } elsif ($exitpage) {
+        redirect $exitpage;
     } else {
         # TODO: perhaps make this more configurable, perhaps by attempting to
         # render a template first.
         return "OK, logged out successfully.";
     }
 };
+
+}
+
 
 sub _default_permission_denied_page {
     return <<PAGE
@@ -587,6 +629,24 @@ $login_fail_message
 </form>
 PAGE
 }
+
+# Replacement for much maligned and misunderstood smartmatch operator
+sub _smart_match {
+    my ($got, $want) = @_;
+    if (!ref $want) {
+        return $got eq $want;
+    } elsif (ref $want eq 'Regexp') {
+        return $got =~ $want;
+    } elsif (ref $want eq 'ARRAY') {
+        return grep { $_ eq $got } @$want;
+    } else {
+        carp "Don't know how to match against a " . ref $want;
+    }
+}
+
+
+
+
 =head1 AUTHOR
 
 David Precious, C<< <davidp at preshweb.co.uk> >>
@@ -612,9 +672,16 @@ Configurable login/logout URLs added by Rene (hertell)
 
 Regex support for require_role by chenryn
 
+Support for user_roles looking in other realms by Colin Ewen (casao)
+
+LDAP provider added by Mark Meyer (ofosos)
+
+Config options for default login/logout handlers by Henk van Oers (hvoers)
+
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 David Precious.
+
+Copyright 2012-13 David Precious.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

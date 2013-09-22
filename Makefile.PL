@@ -13,7 +13,8 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
-        'Dancer'     => 1.3100,
+        'Mock::Quick' => 0,
+        'Dancer'     => 1.3118,
         'Crypt::SaltedHash' => 0,
         'YAML'       => 0, # for config files (TODO: make optional?)
         
